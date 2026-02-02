@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en" x-data="dashboard()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TukuApps Dashboard - Stock Prediction AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .terminal-text {
+            font-family: 'Courier New', monospace;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px #10b981, 0 0 10px #10b981; }
+            50% { box-shadow: 0 0 10px #10b981, 0 0 20px #10b981; }
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        .scrollbar-dark::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-dark::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .scrollbar-dark::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        /* Fade transition animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+    <!-- Main Layout -->
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col fixed h-full">
+            <!-- Logo -->
+            <div class="p-6 border-b border-gray-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg text-white">TukuApps</h1>
+                        <p class="text-xs text-gray-500">Stock Prediction AI</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-2">
+                <template x-for="(item, index) in menuItems" :key="index">
+                    <button 
+                        @click="activeTab = item.id"
+                        :class="activeTab === item.id 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200"
+                    >
+                        <i :data-lucide="item.icon" class="w-5 h-5"></i>
+                        <span class="font-medium" x-text="item.label"></span>
+                    </button>
+                </template>
+            </nav>
+
+            <!-- Status Footer -->
+            <div class="p-4 border-t border-gray-800">
+                <div class="bg-gray-800/50 rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">MongoDB Status</span>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full" :class="mongoStatus === 'connected' ? 'bg-emerald-500 pulse-glow' : 'bg-red-500'"></span>
+                            <span class="text-xs" :class="mongoStatus === 'connected' ? 'text-emerald-400' : 'text-red-400'" x-text="mongoStatus"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Last Sync</span>
+                        <span class="text-xs text-gray-400" x-text="lastSync"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64 bg-gray-950">
+            <!-- Header -->
+            <header class="bg-gray-900/50 backdrop-blur-xl border-b border-gray-800 sticky top-0 z-40">
+                <div class="px-8 py-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-white" x-text="getCurrentTabLabel()"></h2>
+                        <p class="text-sm text-gray-500">Real-time stock prediction powered by AI</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-gray-500"></i>
+                            <span class="text-sm text-gray-400" x-text="currentTime"></span>
+                        </div>
+                        <button class="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+                            <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
+                        </button>
+                        <button class="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+                            <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="p-8">
+                <!-- Dashboard Tab -->
+                <div x-show="activeTab === 'dashboard'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <!-- Dashboard Stats Cards -->
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+                                </div>
+                                <span class="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full">+12.5%</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="stats.buySignals"></p>
+                            <p class="text-sm text-gray-500">Active Buy Signals</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="wallet" class="w-6 h-6 text-blue-500"></i>
+                                </div>
+                                <span class="text-xs text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full">Portfolio</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="'Rp ' + getTotalPortfolioValue().toLocaleString()"></p>
+                            <p class="text-sm text-gray-500">Total Value</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="percent" class="w-6 h-6 text-purple-500"></i>
+                                </div>
+                                <span class="text-xs" :class="getTotalProfitPercent() >= 0 ? 'text-emerald-400 bg-emerald-500/20' : 'text-red-400 bg-red-500/20'" class="px-2 py-1 rounded-full" x-text="(getTotalProfitPercent() >= 0 ? '+' : '') + getTotalProfitPercent().toFixed(2) + '%'"></span>
+                            </div>
+                            <p class="text-2xl font-bold" :class="getTotalProfit() >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="(getTotalProfit() >= 0 ? '+Rp ' : '-Rp ') + Math.abs(getTotalProfit()).toLocaleString()"></p>
+                            <p class="text-sm text-gray-500">Total P&L</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="activity" class="w-6 h-6 text-orange-500"></i>
+                                </div>
+                                <span class="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded-full">Trades</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="trades.length"></p>
+                            <p class="text-sm text-gray-500">Total Trades</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions & Trading Journal Summary -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Recent Predictions -->
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="zap" class="w-5 h-5 text-yellow-500"></i>
+                                    <h3 class="font-semibold text-white">Recent Predictions</h3>
+                                </div>
+                                <button @click="activeTab = 'predictions'" class="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                    <span>View All</span>
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="p-6 space-y-3">
+                                <template x-for="(stock, index) in predictions.slice(0, 5)" :key="index">
+                                    <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer" @click="openStrategyModal(stock)">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center">
+                                                <span class="text-sm font-bold text-white" x-text="stock.ticker.substring(0,2)"></span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-white text-sm" x-text="stock.ticker"></p>
+                                                <p class="text-xs text-gray-500" x-text="'Rp ' + stock.lastClose.toLocaleString()"></p>
+                                            </div>
+                                        </div>
+                                        <span :class="{
+                                            'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': stock.signal === 'BUY',
+                                            'bg-red-500/20 text-red-400 border-red-500/30': stock.signal === 'SELL',
+                                            'bg-yellow-500/20 text-yellow-400 border-yellow-500/30': stock.signal === 'HOLD'
+                                        }" class="px-2 py-1 rounded-full text-xs font-semibold border" x-text="stock.signal"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Trading Journal Summary -->
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="book-open" class="w-5 h-5 text-blue-500"></i>
+                                    <h3 class="font-semibold text-white">Trading Journal Summary</h3>
+                                </div>
+                                <button @click="activeTab = 'journal'" class="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                    <span>View All Records</span>
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                                        <p class="text-xs text-emerald-400 mb-1">Win Rate</p>
+                                        <p class="text-2xl font-bold text-emerald-400" x-text="getWinRate().toFixed(1) + '%'"></p>
+                                    </div>
+                                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                                        <p class="text-xs text-blue-400 mb-1">Avg Return</p>
+                                        <p class="text-2xl font-bold text-blue-400" x-text="getAvgReturn().toFixed(2) + '%'"></p>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Recent Trades</p>
+                                    <template x-for="trade in getClosedTrades().slice(0, 3)" :key="trade.id">
+                                        <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                                            <div>
+                                                <p class="text-sm font-medium text-white" x-text="trade.ticker"></p>
+                                                <p class="text-xs text-gray-500" x-text="trade.date"></p>
+                                            </div>
+                                            <span :class="trade.profit >= 0 ? 'text-emerald-400' : 'text-red-400'" class="text-sm font-semibold" x-text="(trade.profit >= 0 ? '+' : '') + (trade.profitPercent || 0).toFixed(2) + '%'"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button @click="activeTab = 'journal'; showJournalModal = true" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-white font-medium flex items-center justify-center gap-2 transition-colors">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    <span>Log New Trade</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predictions Tab -->
+                <div x-show="activeTab === 'predictions'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+                                </div>
+                                <span class="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full">+12.5%</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="stats.buySignals"></p>
+                            <p class="text-sm text-gray-500">Buy Signals</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trending-down" class="w-6 h-6 text-red-500"></i>
+                                </div>
+                                <span class="text-xs text-red-400 bg-red-500/20 px-2 py-1 rounded-full">-3.2%</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="stats.sellSignals"></p>
+                            <p class="text-sm text-gray-500">Sell Signals</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="minus" class="w-6 h-6 text-yellow-500"></i>
+                                </div>
+                                <span class="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">0%</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="stats.holdSignals"></p>
+                            <p class="text-sm text-gray-500">Hold Signals</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="brain" class="w-6 h-6 text-blue-500"></i>
+                                </div>
+                                <span class="text-xs text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full">Active</span>
+                            </div>
+                            <p class="text-2xl font-bold text-white" x-text="stats.modelAccuracy + '%'"></p>
+                            <p class="text-sm text-gray-500">Model Accuracy</p>
+                        </div>
+                    </div>
+
+                    <!-- Predictions Table -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-500"></i>
+                                <h3 class="font-semibold text-white">Stock Predictions</h3>
+                                <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-full">
+                                    <span x-text="predictions.length"></span> stocks
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button @click="fetchPredictions()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''"></i>
+                                    <span class="text-sm">Refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto scrollbar-dark">
+                            <table class="w-full">
+                                <thead class="bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ticker</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Last Close</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Change %</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Signal</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Confidence</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Predicted</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800">
+                                    <template x-for="(stock, index) in predictions" :key="index">
+                                        <tr class="hover:bg-gray-800/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center">
+                                                        <span class="text-sm font-bold text-white" x-text="stock.ticker.substring(0,2)"></span>
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-semibold text-white" x-text="stock.ticker"></p>
+                                                        <p class="text-xs text-gray-500" x-text="stock.company"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="font-mono text-white" x-text="'Rp ' + stock.lastClose.toLocaleString()"></span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-2">
+                                                    <i :data-lucide="stock.change >= 0 ? 'arrow-up-right' : 'arrow-down-right'" 
+                                                       :class="stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'"
+                                                       class="w-4 h-4"></i>
+                                                    <span :class="stock.change >= 0 ? 'text-emerald-400' : 'text-red-400'" 
+                                                          x-text="(stock.change >= 0 ? '+' : '') + stock.change.toFixed(2) + '%'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span :class="{
+                                                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': stock.signal === 'BUY',
+                                                    'bg-red-500/20 text-red-400 border-red-500/30': stock.signal === 'SELL',
+                                                    'bg-yellow-500/20 text-yellow-400 border-yellow-500/30': stock.signal === 'HOLD'
+                                                }" class="px-3 py-1 rounded-full text-xs font-semibold border" x-text="stock.signal"></span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                                        <div class="h-full rounded-full" 
+                                                             :class="stock.confidence > 75 ? 'bg-emerald-500' : stock.confidence > 50 ? 'bg-yellow-500' : 'bg-red-500'"
+                                                             :style="'width: ' + stock.confidence + '%'"></div>
+                                                    </div>
+                                                    <span class="text-sm text-gray-400" x-text="stock.confidence + '%'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="font-mono text-gray-300" x-text="'Rp ' + stock.predicted.toLocaleString()"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <button @click="openStrategyModal(stock)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-medium transition-colors" title="Quick Strategy">
+                                                        <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <button @click="openTickerDetail(stock)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1">
+                                                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                                                        <span>Detail</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Journal Tab -->
+                <div x-show="activeTab === 'journal'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <!-- Journal Header with Action Button -->
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white">Trading Journal</h3>
+                            <p class="text-sm text-gray-500 mt-1">Track and analyze your trading performance</p>
+                        </div>
+                        <button @click="showJournalModal = true; resetJournalForm()" class="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-medium text-white transition-colors">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            <span>Log New Trade</span>
+                        </button>
+                    </div>
+
+                    <!-- Performance Summary Cards -->
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trophy" class="w-5 h-5 text-emerald-500"></i>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold text-emerald-400" x-text="getWinRate().toFixed(1) + '%'"></p>
+                            <p class="text-sm text-gray-500">Win Rate</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-5 h-5 text-blue-500"></i>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold text-blue-400" x-text="getAvgReturn().toFixed(2) + '%'"></p>
+                            <p class="text-sm text-gray-500">Avg Return</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="dollar-sign" class="w-5 h-5 text-purple-500"></i>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold" :class="getTotalProfit() >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="(getTotalProfit() >= 0 ? '+Rp ' : '-Rp ') + Math.abs(getTotalProfit()).toLocaleString()"></p>
+                            <p class="text-sm text-gray-500">Total P&L</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="bar-chart" class="w-5 h-5 text-orange-500"></i>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold text-white" x-text="trades.length"></p>
+                            <p class="text-sm text-gray-500">Total Trades</p>
+                        </div>
+                    </div>
+
+                    <!-- Trading Journal Table -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="list" class="w-5 h-5 text-emerald-500"></i>
+                                <h3 class="font-semibold text-white">All Trades</h3>
+                                <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-full">
+                                    <span x-text="trades.length"></span> entries
+                                </span>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto scrollbar-dark">
+                            <table class="w-full">
+                                <thead class="bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ticker</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Entry</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Exit/Current</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Qty</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">P&L</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800">
+                                    <template x-for="trade in trades" :key="trade.id">
+                                        <tr class="hover:bg-gray-800/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <span class="text-sm text-gray-300" x-text="trade.date"></span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center">
+                                                        <span class="text-xs font-bold text-white" x-text="trade.ticker.substring(0,2)"></span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-medium text-white" x-text="trade.ticker"></span>
+                                                        <p class="text-xs text-gray-500" x-text="trade.company || ''"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span :class="trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'" class="px-2 py-1 rounded-full text-xs font-semibold border" x-text="trade.type"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <span :class="trade.status === 'Open' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'" class="px-2 py-1 rounded-full text-xs font-semibold border" x-text="trade.status"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="font-mono text-white" x-text="maskValue(trade.entryPrice, 'Rp ')"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="font-mono" :class="trade.status === 'Open' ? (trade.currentPrice >= trade.entryPrice ? 'text-emerald-400' : 'text-red-400') : 'text-white'" x-text="maskValue(trade.status === 'Open' ? trade.currentPrice : trade.exitPrice, 'Rp ')"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="text-gray-300" x-text="trade.quantity"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <template x-if="trade.status === 'Closed'">
+                                                    <div class="flex items-center justify-end gap-1">
+                                                        <i :data-lucide="trade.profit >= 0 ? 'arrow-up-right' : 'arrow-down-right'" :class="trade.profit >= 0 ? 'text-emerald-500' : 'text-red-500'" class="w-4 h-4"></i>
+                                                        <span :class="trade.profit >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono font-semibold" x-text="maskValue(Math.abs(trade.profit), trade.profit >= 0 ? '+Rp ' : '-Rp ')"></span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="trade.status === 'Open'">
+                                                    <div class="flex items-center justify-end gap-1">
+                                                        <i :data-lucide="getFloatingPL(trade) >= 0 ? 'arrow-up-right' : 'arrow-down-right'" :class="getFloatingPL(trade) >= 0 ? 'text-emerald-500' : 'text-red-500'" class="w-4 h-4"></i>
+                                                        <span :class="getFloatingPL(trade) >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono text-sm" x-text="maskValue(Math.abs(getFloatingPL(trade)), getFloatingPL(trade) >= 0 ? '+Rp ' : '-Rp ')"></span>
+                                                    </div>
+                                                </template>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <template x-if="trade.status === 'Open'">
+                                                        <button @click="closeTrade(trade)" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition-colors">
+                                                            Close
+                                                        </button>
+                                                    </template>
+                                                    <button @click="viewTradeNotes(trade)" class="text-gray-400 hover:text-white transition-colors" title="View Notes">
+                                                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div x-show="trades.length === 0" class="p-12 text-center">
+                            <i data-lucide="inbox" class="w-16 h-16 mx-auto text-gray-700 mb-4"></i>
+                            <p class="text-gray-500">No trading records yet. Start logging your trades!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Tab -->
+                <div x-show="activeTab === 'portfolio'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <!-- Portfolio Header with Privacy Toggle -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white">My Portfolio</h3>
+                            <p class="text-sm text-gray-500 mt-1">Track your investments and trading balance</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button @click="togglePrivacyMode()" :class="privacyMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-800 hover:bg-gray-700'" class="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-white transition-colors">
+                                <i :data-lucide="privacyMode ? 'eye-off' : 'eye'" class="w-5 h-5"></i>
+                                <span x-text="privacyMode ? 'Privacy On' : 'Privacy Off'"></span>
+                            </button>
+                            <button @click="showAddHoldingModal = true" class="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-medium text-white transition-colors">
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                                <span>Add Position</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary Cards -->
+                    <div class="grid grid-cols-3 gap-6 mb-8">
+                        <!-- Trading Balance Card -->
+                        <div class="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="wallet" class="w-7 h-7 text-blue-400"></i>
+                                </div>
+                                <span class="text-xs text-blue-400 bg-blue-500/20 px-3 py-1 rounded-full">Cash</span>
+                            </div>
+                            <p class="text-sm text-blue-300 mb-1">Trading Balance</p>
+                            <p class="text-3xl font-bold text-white" x-text="maskValue(tradingBalance, 'Rp ')"></p>
+                            <p class="text-xs text-blue-400 mt-2">Available for trading</p>
+                        </div>
+
+                        <!-- Invested Amount Card -->
+                        <div class="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-7 h-7 text-purple-400"></i>
+                                </div>
+                                <span class="text-xs text-purple-400 bg-purple-500/20 px-3 py-1 rounded-full">Invested</span>
+                            </div>
+                            <p class="text-sm text-purple-300 mb-1">Invested Amount</p>
+                            <p class="text-3xl font-bold text-white" x-text="maskValue(getInvestedAmount(), 'Rp ')"></p>
+                            <p class="text-xs text-purple-400 mt-2" x-text="getOpenTrades().length + ' active positions'"></p>
+                        </div>
+
+                        <!-- Total Equity Card -->
+                        <div class="bg-gradient-to-br from-emerald-600/20 to-teal-800/20 border border-emerald-500/30 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="landmark" class="w-7 h-7 text-emerald-400"></i>
+                                </div>
+                                <span class="text-xs px-3 py-1 rounded-full" :class="getPortfolioFloatingPL() >= 0 ? 'text-emerald-400 bg-emerald-500/20' : 'text-red-400 bg-red-500/20'" x-text="getPortfolioFloatingPLPercent()"></span>
+                            </div>
+                            <p class="text-sm text-emerald-300 mb-1">Total Equity</p>
+                            <p class="text-3xl font-bold text-white" x-text="maskValue(getTotalEquity(), 'Rp ')"></p>
+                            <p class="text-xs mt-2" :class="getPortfolioFloatingPL() >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="'Floating P/L: ' + maskValue(Math.abs(getPortfolioFloatingPL()), getPortfolioFloatingPL() >= 0 ? '+Rp ' : '-Rp ')"></p>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio Allocation Visual -->
+                    <div class="grid grid-cols-3 gap-6 mb-8">
+                        <div class="col-span-1 bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                                <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-500"></i>
+                                Portfolio Allocation
+                            </h4>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Cash</span>
+                                    <span class="text-sm font-semibold text-blue-400" x-text="getCashAllocation() + '%'"></span>
+                                </div>
+                                <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500 rounded-full transition-all duration-500" :style="'width: ' + getCashAllocation() + '%'"></div>
+                                </div>
+                                <div class="flex items-center justify-between mt-4">
+                                    <span class="text-sm text-gray-400">Invested</span>
+                                    <span class="text-sm font-semibold text-purple-400" x-text="getInvestedAllocation() + '%'"></span>
+                                </div>
+                                <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <div class="h-full bg-purple-500 rounded-full transition-all duration-500" :style="'width: ' + getInvestedAllocation() + '%'"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                                <i data-lucide="bar-chart-2" class="w-5 h-5 text-emerald-500"></i>
+                                Quick Stats
+                            </h4>
+                            <div class="grid grid-cols-4 gap-4">
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-2xl font-bold text-white" x-text="getOpenTrades().length"></p>
+                                    <p class="text-xs text-gray-500">Open Positions</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-2xl font-bold text-emerald-400" x-text="getWinningPositions()"></p>
+                                    <p class="text-xs text-gray-500">In Profit</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-2xl font-bold text-red-400" x-text="getLosingPositions()"></p>
+                                    <p class="text-xs text-gray-500">In Loss</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-2xl font-bold text-blue-400" x-text="getBestPerformer()"></p>
+                                    <p class="text-xs text-gray-500">Best Position</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Holdings Table -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="briefcase" class="w-5 h-5 text-emerald-500"></i>
+                                <h3 class="font-semibold text-white">Active Holdings</h3>
+                                <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-full">
+                                    <span x-text="getOpenTrades().length"></span> positions
+                                </span>
+                            </div>
+                            <button @click="refreshPrices()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                <span class="text-sm">Refresh Prices</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto scrollbar-dark">
+                            <table class="w-full">
+                                <thead class="bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ticker</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Avg Price</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Current Price</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Qty (Lot)</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Market Value</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Floating P/L</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800">
+                                    <template x-for="holding in getOpenTrades()" :key="holding.id">
+                                        <tr class="hover:bg-gray-800/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getFloatingPL(holding) >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'">
+                                                        <span class="text-sm font-bold" :class="getFloatingPL(holding) >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="holding.ticker.substring(0,2)"></span>
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-semibold text-white" x-text="holding.ticker"></p>
+                                                        <p class="text-xs text-gray-500" x-text="holding.company"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="font-mono text-white" x-text="maskValue(holding.entryPrice, 'Rp ')"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="font-mono" :class="holding.currentPrice >= holding.entryPrice ? 'text-emerald-400' : 'text-red-400'" x-text="maskValue(holding.currentPrice, 'Rp ')"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="text-gray-300" x-text="holding.quantity"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <span class="font-mono text-white" x-text="maskValue(getMarketValue(holding), 'Rp ')"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <div class="flex items-center justify-end gap-2">
+                                                    <i :data-lucide="getFloatingPL(holding) >= 0 ? 'arrow-up-right' : 'arrow-down-right'" :class="getFloatingPL(holding) >= 0 ? 'text-emerald-500' : 'text-red-500'" class="w-4 h-4"></i>
+                                                    <div class="text-right">
+                                                        <p :class="getFloatingPL(holding) >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-semibold" x-text="maskValue(Math.abs(getFloatingPL(holding)), getFloatingPL(holding) >= 0 ? '+Rp ' : '-Rp ')"></p>
+                                                        <p :class="getFloatingPLPercent(holding) >= 0 ? 'text-emerald-500' : 'text-red-500'" class="text-xs" x-text="(getFloatingPLPercent(holding) >= 0 ? '+' : '') + getFloatingPLPercent(holding).toFixed(2) + '%'"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <button @click="closeTrade(holding)" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition-colors">
+                                                    Close Position
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div x-show="getOpenTrades().length === 0" class="p-12 text-center">
+                            <i data-lucide="briefcase" class="w-16 h-16 mx-auto text-gray-700 mb-4"></i>
+                            <p class="text-gray-500">No active holdings. Add a new position to get started!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Training Center Tab -->
+                <div x-show="activeTab === 'training'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <div class="grid grid-cols-3 gap-6 mb-8">
+                        <!-- Training Controls -->
+                        <div class="col-span-1 space-y-6">
+                            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="brain" class="w-5 h-5 text-purple-500"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-white">AI Training Center</h3>
+                                        <p class="text-xs text-gray-500">LSTM Model Configuration</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-400 mb-2 block">Epochs</label>
+                                        <input type="number" x-model="trainingConfig.epochs" 
+                                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-400 mb-2 block">Batch Size</label>
+                                        <input type="number" x-model="trainingConfig.batchSize"
+                                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-400 mb-2 block">Learning Rate</label>
+                                        <input type="text" x-model="trainingConfig.learningRate"
+                                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-400 mb-2 block">Select Ticker</label>
+                                        <select x-model="trainingConfig.ticker"
+                                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                                            <option value="ALL">All Tickers</option>
+                                            <template x-for="stock in predictions" :key="stock.ticker">
+                                                <option :value="stock.ticker" x-text="stock.ticker"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button @click="startTraining()"
+                                        :disabled="isTraining"
+                                        :class="isTraining ? 'bg-gray-700 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'"
+                                        class="w-full mt-6 py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all duration-200">
+                                    <i data-lucide="play" class="w-5 h-5" x-show="!isTraining"></i>
+                                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin" x-show="isTraining"></i>
+                                    <span x-text="isTraining ? 'Training in Progress...' : 'Run Training'"></span>
+                                </button>
+                            </div>
+
+                            <!-- Training Stats -->
+                            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                                <h4 class="font-semibold text-white mb-4">Training Statistics</h4>
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-500">Current Epoch</span>
+                                        <span class="font-mono text-white" x-text="trainingStats.currentEpoch + '/' + trainingConfig.epochs"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-500">Current Loss</span>
+                                        <span class="font-mono text-emerald-400" x-text="trainingStats.currentLoss.toFixed(6)"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-500">Best Loss</span>
+                                        <span class="font-mono text-emerald-400" x-text="trainingStats.bestLoss.toFixed(6)"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-500">Elapsed Time</span>
+                                        <span class="font-mono text-white" x-text="formatTime(trainingStats.elapsedTime)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Terminal Output -->
+                        <div class="col-span-2">
+                            <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden h-full">
+                                <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex gap-2">
+                                            <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                                            <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                                            <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                                        </div>
+                                        <span class="text-sm text-gray-400">Training Terminal</span>
+                                    </div>
+                                    <button @click="trainingLogs = []" class="text-xs text-gray-500 hover:text-gray-300">Clear</button>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="px-6 py-4 border-b border-gray-800 bg-gray-800/50" x-show="isTraining || trainingStats.currentEpoch > 0">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm text-gray-400">Training Progress</span>
+                                        <span class="text-sm font-mono text-emerald-400" x-text="Math.round((trainingStats.currentEpoch / trainingConfig.epochs) * 100) + '%'"></span>
+                                    </div>
+                                    <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                                             :style="'width: ' + (trainingStats.currentEpoch / trainingConfig.epochs * 100) + '%'"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Terminal Content -->
+                                <div class="bg-black p-6 h-96 overflow-y-auto scrollbar-dark terminal-text" id="terminal">
+                                    <template x-for="(log, index) in trainingLogs" :key="index">
+                                        <div class="mb-1">
+                                            <span class="text-gray-500" x-text="log.time"></span>
+                                            <span :class="{
+                                                'text-emerald-400': log.type === 'success',
+                                                'text-yellow-400': log.type === 'warning',
+                                                'text-red-400': log.type === 'error',
+                                                'text-blue-400': log.type === 'info',
+                                                'text-gray-300': log.type === 'default'
+                                            }" x-text="log.message"></span>
+                                        </div>
+                                    </template>
+                                    <div x-show="isTraining" class="flex items-center gap-2 text-emerald-400">
+                                        <span>▌</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Control Tab -->
+                <div x-show="activeTab === 'data'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fade-in">
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Manual Data Collection -->
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="database" class="w-5 h-5 text-blue-500"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white">Manual Data Collection</h3>
+                                    <p class="text-xs text-gray-500">Sync stock data from Yahoo Finance</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 mb-6">
+                                <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
+                                    <div class="flex items-center gap-3">
+                                        <i data-lucide="hard-drive" class="w-5 h-5 text-gray-500"></i>
+                                        <span class="text-sm text-gray-300">MongoDB Connection</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full" :class="mongoStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                                        <span class="text-sm" :class="mongoStatus === 'connected' ? 'text-emerald-400' : 'text-red-400'" x-text="mongoStatus"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
+                                    <div class="flex items-center gap-3">
+                                        <i data-lucide="calendar" class="w-5 h-5 text-gray-500"></i>
+                                        <span class="text-sm text-gray-300">Last Sync</span>
+                                    </div>
+                                    <span class="text-sm text-gray-400" x-text="lastSync"></span>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
+                                    <div class="flex items-center gap-3">
+                                        <i data-lucide="file-stack" class="w-5 h-5 text-gray-500"></i>
+                                        <span class="text-sm text-gray-300">Total Records</span>
+                                    </div>
+                                    <span class="text-sm text-white font-mono" x-text="dataStats.totalRecords.toLocaleString()"></span>
+                                </div>
+                            </div>
+
+                            <button @click="syncData()"
+                                    :disabled="isSyncing"
+                                    :class="isSyncing ? 'bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'"
+                                    class="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-colors">
+                                <i data-lucide="refresh-cw" class="w-5 h-5" :class="isSyncing ? 'animate-spin' : ''"></i>
+                                <span x-text="isSyncing ? 'Syncing...' : 'Sync Now'"></span>
+                            </button>
+                        </div>
+
+                        <!-- Data Statistics -->
+                        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="pie-chart" class="w-5 h-5 text-orange-500"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white">Data Statistics</h3>
+                                    <p class="text-xs text-gray-500">Overview of collected data</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-bold text-white" x-text="dataStats.totalTickers"></p>
+                                    <p class="text-sm text-gray-500">Total Tickers</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-bold text-white" x-text="dataStats.daysOfData"></p>
+                                    <p class="text-sm text-gray-500">Days of Data</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-bold text-white" x-text="dataStats.modelsCount"></p>
+                                    <p class="text-sm text-gray-500">Trained Models</p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-bold text-emerald-400" x-text="dataStats.avgAccuracy + '%'"></p>
+                                    <p class="text-sm text-gray-500">Avg Accuracy</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticker List -->
+                        <div class="col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-teal-500/20 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="list" class="w-5 h-5 text-teal-500"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-white">Tracked Tickers</h3>
+                                        <p class="text-xs text-gray-500">Indonesian stocks in database</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-3">
+                                <template x-for="stock in predictions" :key="stock.ticker">
+                                    <div class="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 flex items-center gap-2">
+                                        <span class="text-sm font-medium text-white" x-text="stock.ticker"></span>
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Strategy Modal -->
+    <div x-show="showStrategyModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="showStrategyModal = false">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showStrategyModal = false"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+            
+            <!-- Header -->
+            <div class="sticky top-0 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                        <span class="text-lg font-bold text-white" x-text="selectedStock?.ticker?.substring(0,2)"></span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white" x-text="selectedStock?.ticker"></h3>
+                        <p class="text-sm text-gray-500" x-text="selectedStock?.company"></p>
+                    </div>
+                </div>
+                <button @click="showStrategyModal = false" class="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-400"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6 space-y-6">
+                <!-- Signal Badge -->
+                <div class="flex items-center gap-4">
+                    <span :class="{
+                        'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': selectedStock?.signal === 'BUY',
+                        'bg-red-500/20 text-red-400 border-red-500/30': selectedStock?.signal === 'SELL',
+                        'bg-yellow-500/20 text-yellow-400 border-yellow-500/30': selectedStock?.signal === 'HOLD'
+                    }" class="px-4 py-2 rounded-full text-sm font-bold border" x-text="selectedStock?.signal + ' SIGNAL'"></span>
+                    <span class="text-sm text-gray-500">Confidence: <span class="text-white font-mono" x-text="selectedStock?.confidence + '%'"></span></span>
+                </div>
+
+                <!-- Trading Strategy -->
+                <div class="bg-gray-800/50 rounded-xl p-6">
+                    <h4 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="target" class="w-5 h-5 text-emerald-500"></i>
+                        Trading Strategy
+                    </h4>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Entry Area -->
+                        <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="log-in" class="w-4 h-4 text-blue-400"></i>
+                                <span class="text-sm text-gray-400">Entry Area</span>
+                            </div>
+                            <p class="text-xl font-bold text-blue-400" x-text="'Rp ' + selectedStock?.strategy?.entryLow?.toLocaleString() + ' - ' + selectedStock?.strategy?.entryHigh?.toLocaleString()"></p>
+                        </div>
+
+                        <!-- Target Price -->
+                        <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
+                                <span class="text-sm text-gray-400">Target Price</span>
+                            </div>
+                            <p class="text-xl font-bold text-emerald-400" x-text="'Rp ' + selectedStock?.strategy?.targetPrice?.toLocaleString()"></p>
+                            <p class="text-xs text-emerald-500/70" x-text="'+' + selectedStock?.strategy?.targetPercent + '% potential'"></p>
+                        </div>
+
+                        <!-- Stop Loss -->
+                        <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="shield-x" class="w-4 h-4 text-red-400"></i>
+                                <span class="text-sm text-gray-400">Stop Loss</span>
+                            </div>
+                            <p class="text-xl font-bold text-red-400" x-text="'Rp ' + selectedStock?.strategy?.stopLoss?.toLocaleString()"></p>
+                            <p class="text-xs text-red-500/70" x-text="selectedStock?.strategy?.stopLossPercent + '% risk'"></p>
+                        </div>
+
+                        <!-- Trailing Stop -->
+                        <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="git-branch" class="w-4 h-4 text-purple-400"></i>
+                                <span class="text-sm text-gray-400">Trailing Stop</span>
+                            </div>
+                            <p class="text-xl font-bold text-purple-400" x-text="selectedStock?.strategy?.trailingStop + '%'"></p>
+                            <p class="text-xs text-purple-500/70">Dynamic protection</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk/Reward -->
+                <div class="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Risk/Reward Ratio</span>
+                        <span class="text-lg font-bold text-emerald-400" x-text="'1 : ' + selectedStock?.strategy?.riskReward"></span>
+                    </div>
+                </div>
+
+                <!-- Price Info -->
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Last Close</p>
+                        <p class="text-lg font-mono text-white" x-text="'Rp ' + selectedStock?.lastClose?.toLocaleString()"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Change</p>
+                        <p :class="selectedStock?.change >= 0 ? 'text-emerald-400' : 'text-red-400'" 
+                           class="text-lg font-mono" 
+                           x-text="(selectedStock?.change >= 0 ? '+' : '') + selectedStock?.change?.toFixed(2) + '%'"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Predicted</p>
+                        <p class="text-lg font-mono text-white" x-text="'Rp ' + selectedStock?.predicted?.toLocaleString()"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-gray-800 px-6 py-4 flex justify-end gap-3">
+                <button @click="showStrategyModal = false" 
+                        class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-medium text-gray-300 transition-colors">
+                    Close
+                </button>
+                <button class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl font-medium text-white flex items-center gap-2 transition-colors">
+                    <i data-lucide="bookmark" class="w-4 h-4"></i>
+                    Add to Watchlist
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Journal Modal -->
+    <div x-show="showJournalModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="showJournalModal = false">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showJournalModal = false"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+            
+            <!-- Header -->
+            <div class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                        <i data-lucide="edit-3" class="w-5 h-5 text-emerald-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Log New Trade</h3>
+                        <p class="text-xs text-gray-500">Record your trading activity</p>
+                    </div>
+                </div>
+                <button @click="showJournalModal = false" class="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-400"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <form @submit.prevent="submitTrade()" class="p-6 space-y-4">
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Ticker</label>
+                        <input type="text" x-model="journalForm.ticker" required placeholder="e.g., BBCA.JK"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Trade Type</label>
+                        <select x-model="journalForm.type" required
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                            <option value="BUY">BUY</option>
+                            <option value="SELL">SELL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Status</label>
+                        <select x-model="journalForm.status" required
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                            <option value="Closed">Closed (Completed)</option>
+                            <option value="Open">Open (Active Position)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Entry Price</label>
+                        <input type="number" x-model="journalForm.entryPrice" required step="0.01" placeholder="0.00"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                    <div x-show="journalForm.status === 'Closed'">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Exit Price</label>
+                        <input type="number" x-model="journalForm.exitPrice" :required="journalForm.status === 'Closed'" step="0.01" placeholder="0.00"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                    <div x-show="journalForm.status === 'Open'">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Current Price (Optional)</label>
+                        <input type="number" x-model="journalForm.currentPrice" step="0.01" placeholder="0.00"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Quantity</label>
+                        <input type="number" x-model="journalForm.quantity" required min="1" placeholder="100"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Date</label>
+                        <input type="date" x-model="journalForm.date" required
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Notes (Optional)</label>
+                    <textarea x-model="journalForm.notes" rows="3" placeholder="Add trading notes, strategy, or observations..."
+                              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors resize-none"></textarea>
+                </div>
+
+                <!-- Calculated P&L Preview -->
+                <div x-show="journalForm.status === 'Closed' && journalForm.entryPrice && journalForm.exitPrice && journalForm.quantity" class="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Estimated P&L:</span>
+                        <span :class="calculateProfitPreview() >= 0 ? 'text-emerald-400' : 'text-red-400'" class="text-lg font-bold" x-text="(calculateProfitPreview() >= 0 ? '+Rp ' : '-Rp ') + Math.abs(calculateProfitPreview()).toLocaleString()"></span>
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-sm text-gray-400">Return:</span>
+                        <span :class="calculateReturnPreview() >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-semibold" x-text="(calculateReturnPreview() >= 0 ? '+' : '') + calculateReturnPreview().toFixed(2) + '%'"></span>
+                    </div>
+                </div>
+
+                <!-- Open Position Info -->
+                <div x-show="journalForm.status === 'Open' && journalForm.entryPrice && journalForm.quantity" class="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="info" class="w-4 h-4 text-purple-400"></i>
+                        <span class="text-sm text-purple-300 font-medium">Open Position</span>
+                    </div>
+                    <p class="text-xs text-purple-400">This trade will be added to Active Holdings. Your Trading Balance will be reduced by the total investment amount.</p>
+                    <div class="flex items-center justify-between mt-3">
+                        <span class="text-sm text-gray-400">Investment Amount:</span>
+                        <span class="text-lg font-bold text-purple-400" x-text="'Rp ' + (parseFloat(journalForm.entryPrice || 0) * parseInt(journalForm.quantity || 0)).toLocaleString()"></span>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" @click="showJournalModal = false" 
+                            class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-medium text-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl font-medium text-white flex items-center gap-2 transition-colors">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>Save Trade</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Holding Modal -->
+    <div x-show="showAddHoldingModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="showAddHoldingModal = false">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showAddHoldingModal = false"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+            
+            <!-- Header -->
+            <div class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-purple-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Add New Position</h3>
+                        <p class="text-xs text-gray-500">Add a stock to your portfolio</p>
+                    </div>
+                </div>
+                <button @click="showAddHoldingModal = false" class="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-400"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <form @submit.prevent="addHolding()" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Ticker</label>
+                        <input type="text" x-model="holdingForm.ticker" required placeholder="e.g., BBCA.JK"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Company Name</label>
+                        <input type="text" x-model="holdingForm.company" required placeholder="e.g., Bank Central Asia"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Avg Buy Price</label>
+                        <input type="number" x-model="holdingForm.avgPrice" required step="0.01" placeholder="0.00"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Current Price</label>
+                        <input type="number" x-model="holdingForm.currentPrice" required step="0.01" placeholder="0.00"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Quantity (Lot)</label>
+                    <input type="number" x-model="holdingForm.quantity" required min="1" placeholder="100"
+                           class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors">
+                </div>
+
+                <!-- Investment Preview -->
+                <div x-show="holdingForm.avgPrice && holdingForm.quantity" class="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Total Investment:</span>
+                        <span class="text-lg font-bold text-purple-400" x-text="'Rp ' + (parseFloat(holdingForm.avgPrice || 0) * parseInt(holdingForm.quantity || 0)).toLocaleString()"></span>
+                    </div>
+                    <p class="text-xs text-purple-400 mt-2">This amount will be deducted from your Trading Balance</p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" @click="showAddHoldingModal = false" 
+                            class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-medium text-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl font-medium text-white flex items-center gap-2 transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Add Position</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div x-show="showSuccessNotification" 
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         class="fixed bottom-8 right-8 z-50">
+        <div class="bg-emerald-600 border border-emerald-500 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-3">
+            <div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                <i data-lucide="check" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <p class="font-semibold text-white" x-text="notificationMessage"></p>
+                <p class="text-sm text-emerald-100" x-text="notificationSubMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                activeTab: 'dashboard',
+                currentTime: '',
+                mongoStatus: 'connected',
+                lastSync: '2026-02-01 08:30:00',
+                isLoading: false,
+                isTraining: false,
+                isSyncing: false,
+                showStrategyModal: false,
+                showJournalModal: false,
+                showAddHoldingModal: false,
+                showSuccessNotification: false,
+                notificationMessage: 'Trade Logged Successfully!',
+                notificationSubMessage: 'Your trade has been added to the journal',
+                selectedStock: null,
+                selectedJournalEntry: null,
+                holdingForm: {
+                    ticker: '',
+                    company: '',
+                    avgPrice: '',
+                    currentPrice: '',
+                    quantity: ''
+                },
+                journalForm: {
+                    ticker: '',
+                    type: 'BUY',
+                    status: 'Closed',
+                    entryPrice: '',
+                    exitPrice: '',
+                    currentPrice: '',
+                    quantity: '',
+                    date: new Date().toISOString().split('T')[0],
+                    notes: ''
+                },
+                // Unified Trades Array - Single source of truth
+                trades: [
+                    // Open positions (will show in Active Holdings)
+                    { id: 1, ticker: 'BBRI.JK', company: 'Bank Rakyat Indonesia', type: 'BUY', status: 'Open', entryPrice: 5350, exitPrice: null, currentPrice: 5425, quantity: 200, profit: null, profitPercent: null, date: '2026-01-30', notes: 'Long-term hold' },
+                    { id: 2, ticker: 'GOTO.JK', company: 'GoTo Gojek Tokopedia', type: 'BUY', status: 'Open', entryPrice: 72, exitPrice: null, currentPrice: 78, quantity: 500, date: '2026-01-29', notes: 'Speculative play' },
+                    // Closed positions (will show in Trading Journal history)
+                    { id: 3, ticker: 'BBCA.JK', company: 'Bank Central Asia', type: 'BUY', status: 'Closed', entryPrice: 9650, exitPrice: 9875, currentPrice: 9875, quantity: 100, profit: 22500, profitPercent: 2.33, date: '2026-01-28', notes: 'Strong technical breakout' },
+                    { id: 4, ticker: 'TLKM.JK', company: 'Telkom Indonesia', type: 'BUY', status: 'Closed', entryPrice: 3800, exitPrice: 3890, currentPrice: 3890, quantity: 200, profit: 18000, profitPercent: 2.37, date: '2026-01-25', notes: 'Following AI signal' },
+                    { id: 5, ticker: 'UNVR.JK', company: 'Unilever Indonesia', type: 'SELL', status: 'Closed', entryPrice: 4350, exitPrice: 4280, currentPrice: 4280, quantity: 50, profit: -3500, profitPercent: -1.61, date: '2026-01-22', notes: 'Stop loss triggered' }
+                ],
+                
+                // Portfolio & Privacy Mode
+                privacyMode: false,
+                tradingBalance: 3000000,
+
+                menuItems: [
+                    { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+                    { id: 'portfolio', label: 'My Portfolio', icon: 'briefcase' },
+                    { id: 'predictions', label: 'Predictions', icon: 'bar-chart-3' },
+                    { id: 'journal', label: 'Trading Journal', icon: 'book-open' },
+                    { id: 'training', label: 'AI Training', icon: 'brain' },
+                    { id: 'data', label: 'Data Control', icon: 'database' }
+                ],
+
+                stats: {
+                    buySignals: 8,
+                    sellSignals: 3,
+                    holdSignals: 4,
+                    modelAccuracy: 87.5
+                },
+
+                dataStats: {
+                    totalRecords: 1250847,
+                    totalTickers: 15,
+                    daysOfData: 365,
+                    modelsCount: 15,
+                    avgAccuracy: 85
+                },
+
+                predictions: [
+                    { ticker: 'BBCA.JK', company: 'Bank Central Asia', lastClose: 9875, change: 2.34, signal: 'BUY', confidence: 87, predicted: 10250, strategy: { entryLow: 9800, entryHigh: 9900, targetPrice: 10500, targetPercent: 6.3, stopLoss: 9500, stopLossPercent: -3.8, trailingStop: 2.5, riskReward: 1.7 } },
+                    { ticker: 'BBRI.JK', company: 'Bank Rakyat Indonesia', lastClose: 5425, change: -1.23, signal: 'HOLD', confidence: 65, predicted: 5400, strategy: { entryLow: 5350, entryHigh: 5450, targetPrice: 5700, targetPercent: 5.1, stopLoss: 5200, stopLossPercent: -4.1, trailingStop: 2.0, riskReward: 1.2 } },
+                    { ticker: 'TLKM.JK', company: 'Telkom Indonesia', lastClose: 3890, change: 0.78, signal: 'BUY', confidence: 82, predicted: 4050, strategy: { entryLow: 3850, entryHigh: 3920, targetPrice: 4200, targetPercent: 8.0, stopLoss: 3700, stopLossPercent: -4.9, trailingStop: 3.0, riskReward: 1.6 } },
+                    { ticker: 'ASII.JK', company: 'Astra International', lastClose: 5150, change: -2.45, signal: 'SELL', confidence: 78, predicted: 4900, strategy: { entryLow: 5100, entryHigh: 5200, targetPrice: 4800, targetPercent: -6.8, stopLoss: 5400, stopLossPercent: 4.9, trailingStop: 2.5, riskReward: 1.4 } },
+                    { ticker: 'UNVR.JK', company: 'Unilever Indonesia', lastClose: 4280, change: 1.56, signal: 'BUY', confidence: 91, predicted: 4500, strategy: { entryLow: 4250, entryHigh: 4320, targetPrice: 4650, targetPercent: 8.6, stopLoss: 4100, stopLossPercent: -4.2, trailingStop: 2.0, riskReward: 2.0 } },
+                    { ticker: 'GOTO.JK', company: 'GoTo Gojek Tokopedia', lastClose: 78, change: 5.41, signal: 'BUY', confidence: 74, predicted: 85, strategy: { entryLow: 75, entryHigh: 80, targetPrice: 95, targetPercent: 21.8, stopLoss: 68, stopLossPercent: -12.8, trailingStop: 5.0, riskReward: 1.7 } },
+                    { ticker: 'BMRI.JK', company: 'Bank Mandiri', lastClose: 6225, change: 0.32, signal: 'HOLD', confidence: 58, predicted: 6300, strategy: { entryLow: 6150, entryHigh: 6250, targetPrice: 6500, targetPercent: 4.4, stopLoss: 6000, stopLossPercent: -3.6, trailingStop: 2.0, riskReward: 1.2 } },
+                    { ticker: 'ICBP.JK', company: 'Indofood CBP', lastClose: 10575, change: -0.89, signal: 'SELL', confidence: 71, predicted: 10200, strategy: { entryLow: 10500, entryHigh: 10600, targetPrice: 10000, targetPercent: -5.4, stopLoss: 10850, stopLossPercent: 2.6, trailingStop: 2.0, riskReward: 2.1 } }
+                ],
+
+                trainingConfig: {
+                    epochs: 25,
+                    batchSize: 32,
+                    learningRate: '0.001',
+                    ticker: 'ALL'
+                },
+
+                trainingStats: {
+                    currentEpoch: 0,
+                    currentLoss: 0,
+                    bestLoss: 999,
+                    elapsedTime: 0
+                },
+
+                trainingLogs: [],
+                trainingInterval: null,
+                timerInterval: null,
+
+                init() {
+                    this.updateTime();
+                    setInterval(() => this.updateTime(), 1000);
+                    this.$nextTick(() => lucide.createIcons());
+                    
+                    // Load privacy mode from localStorage
+                    const savedPrivacy = localStorage.getItem('tukuapps_privacy_mode');
+                    if (savedPrivacy !== null) {
+                        this.privacyMode = savedPrivacy === 'true';
+                    }
+                    
+                    // Load trading balance from localStorage
+                    const savedBalance = localStorage.getItem('tukuapps_trading_balance');
+                    if (savedBalance !== null) {
+                        this.tradingBalance = parseFloat(savedBalance);
+                    }
+                    
+                    // Load unified trades from localStorage
+                    const savedTrades = localStorage.getItem('tukuapps_trades');
+                    if (savedTrades !== null) {
+                        this.trades = JSON.parse(savedTrades);
+                    }
+                    
+                    // Watch for tab changes to re-render icons
+                    this.$watch('activeTab', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    
+                    this.$watch('showStrategyModal', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    
+                    this.$watch('showJournalModal', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    
+                    this.$watch('showAddHoldingModal', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    
+                    // Watch privacy mode and save to localStorage
+                    this.$watch('privacyMode', (value) => {
+                        localStorage.setItem('tukuapps_privacy_mode', value);
+                    });
+                },
+
+                updateTime() {
+                    const now = new Date();
+                    this.currentTime = now.toLocaleString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit',
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    });
+                },
+
+                getCurrentTabLabel() {
+                    const item = this.menuItems.find(m => m.id === this.activeTab);
+                    return item ? item.label : 'Dashboard';
+                },
+
+                formatTime(seconds) {
+                    const mins = Math.floor(seconds / 60);
+                    const secs = seconds % 60;
+                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                },
+
+                fetchPredictions() {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        this.isLoading = false;
+                        this.addLog('Predictions refreshed from /predict/batch', 'success');
+                    }, 1500);
+                },
+
+                openStrategyModal(stock) {
+                    this.selectedStock = stock;
+                    this.showStrategyModal = true;
+                },
+
+                openTickerDetail(stock) {
+                    // Prepare stock data for the detail page
+                    const stockData = {
+                        ticker: stock.ticker,
+                        company: stock.company,
+                        signal: stock.signal,
+                        confidence: stock.confidence,
+                        lastClose: stock.lastClose,
+                        predicted: stock.predicted,
+                        change: ((stock.predicted - stock.lastClose) / stock.lastClose * 100),
+                        strategy: {
+                            entryLow: stock.strategy.entryLow,
+                            entryHigh: stock.strategy.entryHigh,
+                            targetPrice: stock.strategy.targetPrice,
+                            targetPercent: stock.strategy.targetPercent,
+                            stopLoss: stock.strategy.stopLoss,
+                            stopLossPercent: stock.strategy.stopLossPercent,
+                            trailingStop: stock.strategy.trailingStop,
+                            riskReward: stock.strategy.riskReward
+                        },
+                        model: {
+                            name: `best_lstm_${stock.ticker.replace('.', '_')}.keras`,
+                            accuracy: this.stats.modelAccuracy,
+                            predictionDate: new Date().toISOString().split('T')[0],
+                            health: 'Healthy'
+                        }
+                    };
+                    
+                    // Save to localStorage for the detail page to read
+                    localStorage.setItem('tukuapps_current_stock', JSON.stringify(stockData));
+                    
+                    // Navigate to detail page
+                    window.location.href = `ticker-detail.html?ticker=${stock.ticker}`;
+                },
+
+                addLog(message, type = 'default') {
+                    const now = new Date();
+                    const time = `[${now.toLocaleTimeString()}]`;
+                    this.trainingLogs.push({ time, message, type });
+                    
+                    // Auto-scroll terminal
+                    this.$nextTick(() => {
+                        const terminal = document.getElementById('terminal');
+                        if (terminal) terminal.scrollTop = terminal.scrollHeight;
+                    });
+                },
+
+                startTraining() {
+                    if (this.isTraining) return;
+                    
+                    this.isTraining = true;
+                    this.trainingStats = { currentEpoch: 0, currentLoss: 0, bestLoss: 999, elapsedTime: 0 };
+                    this.trainingLogs = [];
+
+                    this.addLog('='.repeat(50), 'info');
+                    this.addLog('TukuApps LSTM Training Pipeline v2.0', 'info');
+                    this.addLog('='.repeat(50), 'info');
+                    this.addLog(`Ticker: ${this.trainingConfig.ticker}`, 'default');
+                    this.addLog(`Epochs: ${this.trainingConfig.epochs} | Batch: ${this.trainingConfig.batchSize} | LR: ${this.trainingConfig.learningRate}`, 'default');
+                    this.addLog('', 'default');
+                    this.addLog('Loading dataset from MongoDB...', 'info');
+
+                    // Timer
+                    this.timerInterval = setInterval(() => {
+                        this.trainingStats.elapsedTime++;
+                    }, 1000);
+
+                    // Simulate training
+                    setTimeout(() => {
+                        this.addLog('Dataset loaded: 125,847 samples', 'success');
+                        this.addLog('Preprocessing data...', 'info');
+                        
+                        setTimeout(() => {
+                            this.addLog('Feature scaling complete', 'success');
+                            this.addLog('Creating sequences (60 timesteps)...', 'info');
+                            
+                            setTimeout(() => {
+                                this.addLog('Training/Validation split: 80/20', 'success');
+                                this.addLog('', 'default');
+                                this.addLog('Starting model training...', 'warning');
+                                this.addLog('', 'default');
+                                
+                                this.runEpochSimulation();
+                            }, 800);
+                        }, 600);
+                    }, 1000);
+                },
+
+                runEpochSimulation() {
+                    const totalEpochs = parseInt(this.trainingConfig.epochs);
+                    let currentEpoch = 0;
+
+                    this.trainingInterval = setInterval(() => {
+                        currentEpoch++;
+                        this.trainingStats.currentEpoch = currentEpoch;
+                        
+                        // Simulate decreasing loss
+                        const baseLoss = 0.05 * Math.exp(-currentEpoch * 0.15);
+                        const noise = (Math.random() - 0.5) * 0.005;
+                        const loss = Math.max(0.0015, baseLoss + noise);
+                        const valLoss = loss * (1 + Math.random() * 0.2);
+                        
+                        this.trainingStats.currentLoss = loss;
+                        if (loss < this.trainingStats.bestLoss) {
+                            this.trainingStats.bestLoss = loss;
+                        }
+
+                        const lossStr = loss.toFixed(6);
+                        const valLossStr = valLoss.toFixed(6);
+                        const acc = (95 + Math.random() * 4).toFixed(2);
+                        
+                        this.addLog(`Epoch ${currentEpoch}/${totalEpochs} - loss: ${lossStr} - val_loss: ${valLossStr} - accuracy: ${acc}%`, 
+                            loss < 0.01 ? 'success' : 'default');
+
+                        if (currentEpoch >= totalEpochs) {
+                            clearInterval(this.trainingInterval);
+                            clearInterval(this.timerInterval);
+                            
+                            this.addLog('', 'default');
+                            this.addLog('Training completed!', 'success');
+                            this.addLog(`Best loss: ${this.trainingStats.bestLoss.toFixed(6)}`, 'success');
+                            this.addLog('Model saved to: ./models/lstm_' + this.trainingConfig.ticker + '.h5', 'info');
+                            this.addLog('='.repeat(50), 'info');
+                            
+                            this.isTraining = false;
+                        }
+                    }, 400);
+                },
+
+                syncData() {
+                    if (this.isSyncing) return;
+                    
+                    this.isSyncing = true;
+                    this.addLog('Starting data sync from Yahoo Finance...', 'info');
+                    
+                    setTimeout(() => {
+                        this.addLog('Fetching BBCA.JK... OK', 'success');
+                        setTimeout(() => {
+                            this.addLog('Fetching BBRI.JK... OK', 'success');
+                            setTimeout(() => {
+                                this.addLog('Fetching TLKM.JK... OK', 'success');
+                                setTimeout(() => {
+                                    this.addLog('All tickers synced successfully!', 'success');
+                                    this.lastSync = new Date().toLocaleString('id-ID');
+                                    this.dataStats.totalRecords += Math.floor(Math.random() * 100) + 50;
+                                    this.isSyncing = false;
+                                }, 500);
+                            }, 500);
+                        }, 500);
+                    }, 500);
+                },
+
+                // Trading Journal Functions
+                submitTrade() {
+                    const entry = parseFloat(this.journalForm.entryPrice);
+                    const qty = parseInt(this.journalForm.quantity);
+                    const status = this.journalForm.status;
+                    const ticker = this.journalForm.ticker.toUpperCase();
+                    const company = this.getCompanyName(ticker);
+                    
+                    if (status === 'Open') {
+                        // Add as Open trade and deduct from balance
+                        const currentPrice = parseFloat(this.journalForm.currentPrice) || entry;
+                        const investmentAmount = entry * qty;
+                        
+                        if (investmentAmount > this.tradingBalance) {
+                            alert('Insufficient trading balance! Your balance is Rp ' + this.tradingBalance.toLocaleString());
+                            return;
+                        }
+                        
+                        const newTrade = {
+                            id: Date.now(),
+                            ticker: ticker,
+                            company: company,
+                            type: this.journalForm.type,
+                            status: 'Open',
+                            entryPrice: entry,
+                            exitPrice: null,
+                            currentPrice: currentPrice,
+                            quantity: qty,
+                            profit: null,
+                            profitPercent: null,
+                            date: this.journalForm.date,
+                            notes: this.journalForm.notes
+                        };
+                        
+                        this.trades.unshift(newTrade);
+                        this.tradingBalance -= investmentAmount;
+                        this.saveData();
+                        
+                        this.notificationMessage = 'Position Opened!'
+                        this.notificationSubMessage = 'Added to Active Holdings. Balance updated.';
+                    } else {
+                        // Closed trade - add to trades with profit calculated
+                        const exit = parseFloat(this.journalForm.exitPrice);
+                        const profit = (exit - entry) * qty;
+                        const profitPercent = ((exit - entry) / entry) * 100;
+
+                        const newTrade = {
+                            id: Date.now(),
+                            ticker: ticker,
+                            company: company,
+                            type: this.journalForm.type,
+                            status: 'Closed',
+                            entryPrice: entry,
+                            exitPrice: exit,
+                            currentPrice: exit,
+                            quantity: qty,
+                            profit: profit,
+                            profitPercent: profitPercent,
+                            date: this.journalForm.date,
+                            notes: this.journalForm.notes
+                        };
+
+                        this.trades.unshift(newTrade);
+                        this.saveData();
+                        this.notificationMessage = 'Trade Logged Successfully!';
+                        this.notificationSubMessage = 'Your trade has been added to the journal';
+                    }
+                    
+                    // Show success notification
+                    this.showSuccessNotification = true;
+                    setTimeout(() => {
+                        this.showSuccessNotification = false;
+                    }, 3000);
+                    
+                    // Close modal and reset form
+                    this.showJournalModal = false;
+                    this.resetJournalForm();
+                    
+                    // Re-render icons
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                resetJournalForm() {
+                    this.journalForm = {
+                        ticker: '',
+                        type: 'BUY',
+                        status: 'Closed',
+                        entryPrice: '',
+                        exitPrice: '',
+                        currentPrice: '',
+                        quantity: '',
+                        date: new Date().toISOString().split('T')[0],
+                        notes: ''
+                    };
+                },
+
+                calculateProfitPreview() {
+                    if (!this.journalForm.entryPrice || !this.journalForm.exitPrice || !this.journalForm.quantity) return 0;
+                    const entry = parseFloat(this.journalForm.entryPrice);
+                    const exit = parseFloat(this.journalForm.exitPrice);
+                    const qty = parseInt(this.journalForm.quantity);
+                    return (exit - entry) * qty;
+                },
+
+                calculateReturnPreview() {
+                    if (!this.journalForm.entryPrice || !this.journalForm.exitPrice) return 0;
+                    const entry = parseFloat(this.journalForm.entryPrice);
+                    const exit = parseFloat(this.journalForm.exitPrice);
+                    return ((exit - entry) / entry) * 100;
+                },
+
+                getTotalProfit() {
+                    return this.getClosedTrades().reduce((sum, trade) => sum + (trade.profit || 0), 0);
+                },
+
+                getTotalProfitPercent() {
+                    const closedTrades = this.getClosedTrades();
+                    if (closedTrades.length === 0) return 0;
+                    const totalInvestment = closedTrades.reduce((sum, trade) => sum + (trade.entryPrice * trade.quantity), 0);
+                    return (this.getTotalProfit() / totalInvestment) * 100;
+                },
+
+                getTotalPortfolioValue() {
+                    return this.getClosedTrades().reduce((sum, trade) => sum + ((trade.exitPrice || 0) * trade.quantity), 0);
+                },
+
+                getWinRate() {
+                    const closedTrades = this.getClosedTrades();
+                    if (closedTrades.length === 0) return 0;
+                    const winningTrades = closedTrades.filter(trade => trade.profit > 0).length;
+                    return (winningTrades / closedTrades.length) * 100;
+                },
+
+                getAvgReturn() {
+                    const closedTrades = this.getClosedTrades();
+                    if (closedTrades.length === 0) return 0;
+                    const totalReturn = closedTrades.reduce((sum, trade) => sum + (trade.profitPercent || 0), 0);
+                    return totalReturn / closedTrades.length;
+                },
+
+                viewTradeNotes(trade) {
+                    if (trade.notes) {
+                        alert('Trade Notes:\n\n' + trade.notes);
+                    } else {
+                        alert('No notes for this trade.');
+                    }
+                },
+
+                // Portfolio Functions
+                togglePrivacyMode() {
+                    this.privacyMode = !this.privacyMode;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                maskValue(value, prefix = '') {
+                    if (this.privacyMode) {
+                        return prefix + '******';
+                    }
+                    return prefix + value.toLocaleString();
+                },
+
+                saveData() {
+                    localStorage.setItem('tukuapps_trading_balance', this.tradingBalance.toString());
+                    localStorage.setItem('tukuapps_trades', JSON.stringify(this.trades));
+                },
+
+                // Core data access functions
+                getOpenTrades() {
+                    return this.trades.filter(t => t.status === 'Open');
+                },
+
+                getClosedTrades() {
+                    return this.trades.filter(t => t.status === 'Closed');
+                },
+
+                // Portfolio calculations based on Open trades
+                getInvestedAmount() {
+                    return this.getOpenTrades().reduce((sum, trade) => sum + (trade.entryPrice * trade.quantity), 0);
+                },
+
+                getTotalEquity() {
+                    return this.tradingBalance + this.getMarketValueTotal();
+                },
+
+                getMarketValueTotal() {
+                    return this.getOpenTrades().reduce((sum, trade) => sum + (trade.currentPrice * trade.quantity), 0);
+                },
+
+                getPortfolioFloatingPL() {
+                    return this.getOpenTrades().reduce((sum, trade) => {
+                        return sum + ((trade.currentPrice - trade.entryPrice) * trade.quantity);
+                    }, 0);
+                },
+
+                getPortfolioFloatingPLPercent() {
+                    const invested = this.getInvestedAmount();
+                    if (invested === 0) return '0.00%';
+                    const pl = this.getPortfolioFloatingPL();
+                    const percent = (pl / invested) * 100;
+                    return (percent >= 0 ? '+' : '') + percent.toFixed(2) + '%';
+                },
+
+                getCashAllocation() {
+                    const total = this.getTotalEquity();
+                    if (total === 0) return 0;
+                    return ((this.tradingBalance / total) * 100).toFixed(1);
+                },
+
+                getInvestedAllocation() {
+                    const total = this.getTotalEquity();
+                    if (total === 0) return 0;
+                    return ((this.getMarketValueTotal() / total) * 100).toFixed(1);
+                },
+
+                getWinningPositions() {
+                    return this.getOpenTrades().filter(t => t.currentPrice > t.entryPrice).length;
+                },
+
+                getLosingPositions() {
+                    return this.getOpenTrades().filter(t => t.currentPrice < t.entryPrice).length;
+                },
+
+                getBestPerformer() {
+                    const openTrades = this.getOpenTrades();
+                    if (openTrades.length === 0) return 'N/A';
+                    let best = openTrades[0];
+                    let bestPercent = ((best.currentPrice - best.entryPrice) / best.entryPrice) * 100;
+                    
+                    openTrades.forEach(t => {
+                        const percent = ((t.currentPrice - t.entryPrice) / t.entryPrice) * 100;
+                        if (percent > bestPercent) {
+                            best = t;
+                            bestPercent = percent;
+                        }
+                    });
+                    return best.ticker.split('.')[0];
+                },
+
+                getMarketValue(trade) {
+                    return trade.currentPrice * trade.quantity;
+                },
+
+                // Floating P/L for individual trade (used for Open positions)
+                getFloatingPL(trade) {
+                    return (trade.currentPrice - trade.entryPrice) * trade.quantity;
+                },
+
+                getFloatingPLPercent(trade) {
+                    return ((trade.currentPrice - trade.entryPrice) / trade.entryPrice) * 100;
+                },
+
+                getCompanyName(ticker) {
+                    const stock = this.predictions.find(p => p.ticker === ticker);
+                    return stock ? stock.company : ticker.split('.')[0];
+                },
+
+                addHolding() {
+                    const entryPrice = parseFloat(this.holdingForm.avgPrice);
+                    const currentPrice = parseFloat(this.holdingForm.currentPrice);
+                    const qty = parseInt(this.holdingForm.quantity);
+                    const investmentAmount = entryPrice * qty;
+                    
+                    if (investmentAmount > this.tradingBalance) {
+                        alert('Insufficient trading balance! Your balance is Rp ' + this.tradingBalance.toLocaleString());
+                        return;
+                    }
+                    
+                    const newTrade = {
+                        id: Date.now(),
+                        ticker: this.holdingForm.ticker.toUpperCase(),
+                        company: this.holdingForm.company,
+                        type: 'BUY',
+                        status: 'Open',
+                        entryPrice: entryPrice,
+                        exitPrice: null,
+                        currentPrice: currentPrice,
+                        quantity: qty,
+                        profit: null,
+                        profitPercent: null,
+                        date: new Date().toISOString().split('T')[0],
+                        notes: 'Added from Portfolio'
+                    };
+                    
+                    this.trades.unshift(newTrade);
+                    this.tradingBalance -= investmentAmount;
+                    this.saveData();
+                    
+                    // Reset form and close modal
+                    this.holdingForm = {
+                        ticker: '',
+                        company: '',
+                        avgPrice: '',
+                        currentPrice: '',
+                        quantity: ''
+                    };
+                    this.showAddHoldingModal = false;
+                    
+                    // Show notification
+                    this.notificationMessage = 'Position Added!';
+                    this.notificationSubMessage = 'Your holding has been added to the portfolio';
+                    this.showSuccessNotification = true;
+                    setTimeout(() => {
+                        this.showSuccessNotification = false;
+                    }, 3000);
+                    
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                // Close trade - update status from Open to Closed
+                closeTrade(trade) {
+                    const exitPrice = prompt('Enter exit/sell price for ' + trade.ticker + ':', trade.currentPrice);
+                    if (!exitPrice || isNaN(parseFloat(exitPrice))) return;
+                    
+                    const exit = parseFloat(exitPrice);
+                    const profit = (exit - trade.entryPrice) * trade.quantity;
+                    const profitPercent = ((exit - trade.entryPrice) / trade.entryPrice) * 100;
+                    const saleAmount = exit * trade.quantity;
+                    
+                    // Update the trade in the array
+                    const tradeIndex = this.trades.findIndex(t => t.id === trade.id);
+                    if (tradeIndex !== -1) {
+                        this.trades[tradeIndex] = {
+                            ...this.trades[tradeIndex],
+                            status: 'Closed',
+                            exitPrice: exit,
+                            currentPrice: exit,
+                            profit: profit,
+                            profitPercent: profitPercent,
+                            notes: (this.trades[tradeIndex].notes || '') + ' | Closed on ' + new Date().toISOString().split('T')[0]
+                        };
+                    }
+                    
+                    // Return funds to trading balance (capital + profit/loss)
+                    this.tradingBalance += saleAmount;
+                    this.saveData();
+                    
+                    // Show notification
+                    this.notificationMessage = 'Position Closed!';
+                    this.notificationSubMessage = profit >= 0 
+                        ? 'Profit: +Rp ' + profit.toLocaleString()
+                        : 'Loss: -Rp ' + Math.abs(profit).toLocaleString();
+                    this.showSuccessNotification = true;
+                    setTimeout(() => {
+                        this.showSuccessNotification = false;
+                    }, 3000);
+                    
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                refreshPrices() {
+                    // Simulate price refresh from predictions data for Open trades
+                    this.trades = this.trades.map(trade => {
+                        if (trade.status !== 'Open') return trade;
+                        
+                        const prediction = this.predictions.find(p => p.ticker === trade.ticker);
+                        if (prediction) {
+                            return { ...trade, currentPrice: prediction.lastClose };
+                        }
+                        // Simulate small random price change
+                        const change = (Math.random() - 0.5) * 0.04; // -2% to +2%
+                        return { ...trade, currentPrice: Math.round(trade.currentPrice * (1 + change)) };
+                    });
+                    this.saveData();
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            };
+        }
+    </script>
+</body>
+</html>
