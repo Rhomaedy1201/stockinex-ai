@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticker Analysis - TukuApps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 15px currentColor, 0 0 25px currentColor; }
+        }
+        .signal-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        .grid-pattern {
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen grid-pattern">
+    <!-- Navigation Header -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors group">
+                <div class="w-10 h-10 bg-gray-800 group-hover:bg-gray-700 rounded-xl flex items-center justify-center transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </div>
+                <span class="font-medium">Back to Dashboard</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-white">TukuApps</p>
+                    <p class="text-xs text-gray-500">Stock Prediction AI</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-24 pb-12">
+        <!-- Hero Header Section -->
+        <section class="max-w-7xl mx-auto px-6 mb-8">
+            <div class="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 border border-gray-800 rounded-3xl p-8 relative overflow-hidden">
+                <!-- Background decoration -->
+                <div class="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        <!-- Ticker Info -->
+                        <div class="flex items-start gap-6">
+                            <div class="w-20 h-20 bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
+                                <span id="tickerIcon" class="text-3xl font-bold gradient-text">BB</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-4 mb-2">
+                                    <h1 id="tickerSymbol" class="text-4xl font-bold text-white">BBRI.JK</h1>
+                                    <span id="signalBadge" class="px-4 py-2 rounded-full text-sm font-bold border signal-glow bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                                        BUY SIGNAL
+                                    </span>
+                                </div>
+                                <p id="companyName" class="text-xl text-gray-400 mb-3">Bank Rakyat Indonesia</p>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="zap" class="w-4 h-4 text-yellow-500"></i>
+                                        <span class="text-sm text-gray-400">Signal Strength:</span>
+                                        <span id="signalStrength" class="text-sm font-bold text-yellow-400">87%</span>
+                                    </div>
+                                    <div class="w-px h-4 bg-gray-700"></div>
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="clock" class="w-4 h-4 text-gray-500"></i>
+                                        <span id="predictionDate" class="text-sm text-gray-500">Prediction for: Feb 2, 2026</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Price Info -->
+                        <div class="flex items-center gap-8">
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500 mb-1">Last Close</p>
+                                <p id="lastClose" class="text-3xl font-bold text-white font-mono">Rp 5,425</p>
+                            </div>
+                            <div class="w-px h-16 bg-gray-700"></div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500 mb-1">AI Prediction</p>
+                                <p id="predictedPrice" class="text-3xl font-bold gradient-text font-mono">Rp 5,700</p>
+                                <p id="changePercent" class="text-lg font-semibold text-emerald-400 flex items-center justify-end gap-1">
+                                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                                    <span>+5.07%</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Full-Width AI Forecast Chart -->
+        <section class="max-w-7xl mx-auto px-6 mb-8">
+            <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 overflow-hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                            <i data-lucide="line-chart" class="w-6 h-6 text-blue-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-white">AI Forecast Chart</h2>
+                            <p class="text-sm text-gray-500">Historical prices vs AI prediction</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-1 bg-blue-500 rounded"></div>
+                            <span class="text-sm text-gray-400">Actual Price</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-1 bg-emerald-500 rounded" style="border-bottom: 2px dashed;"></div>
+                            <span class="text-sm text-gray-400">AI Prediction</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Strategy Grid -->
+        <section class="max-w-7xl mx-auto px-6 mb-8">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="target" class="w-6 h-6 text-purple-400"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">AI Trading Strategy</h2>
+                    <p class="text-sm text-gray-500">Recommended entry, target, and risk management</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Entry Logic -->
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                            <i data-lucide="log-in" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Entry Logic</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-gray-800/50 rounded-xl p-4">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Entry Area</p>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-500">Low</p>
+                                    <p id="entryLow" class="text-xl font-bold text-blue-400 font-mono">Rp 5,350</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-px bg-gradient-to-r from-blue-500 to-blue-400"></div>
+                                    <i data-lucide="arrow-right" class="w-4 h-4 text-gray-600"></i>
+                                    <div class="w-8 h-px bg-gradient-to-r from-blue-400 to-blue-500"></div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">High</p>
+                                    <p id="entryHigh" class="text-xl font-bold text-blue-400 font-mono">Rp 5,450</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs text-red-400 uppercase tracking-wider">Stop Loss</p>
+                                <i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i>
+                            </div>
+                            <p id="stopLoss" class="text-2xl font-bold text-red-400 font-mono">Rp 5,200</p>
+                            <p id="stopLossPercent" class="text-sm text-red-400/70 mt-1">-4.1% from entry</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Target Logic -->
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                            <i data-lucide="trophy" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Target Logic</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs text-emerald-400 uppercase tracking-wider">Target Price</p>
+                                <i data-lucide="flag" class="w-4 h-4 text-emerald-400"></i>
+                            </div>
+                            <p id="targetPrice" class="text-3xl font-bold text-emerald-400 font-mono">Rp 5,700</p>
+                            <p id="targetPercent" class="text-sm text-emerald-400/70 mt-1">+5.07% potential gain</p>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-xl p-4">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Profit Potential</p>
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <p id="profitPotential" class="text-4xl font-bold gradient-text">+5.07%</p>
+                                    <p class="text-sm text-gray-500 mt-1">Based on AI analysis</p>
+                                </div>
+                                <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-8 h-8 text-emerald-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Management -->
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-orange-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Risk Management</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">R:R Ratio</p>
+                                <p id="rrRatio" class="text-2xl font-bold text-white font-mono">1 : 1.2</p>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">R:R Grade</p>
+                                <p id="rrGrade" class="text-2xl font-bold text-yellow-400">B+</p>
+                            </div>
+                        </div>
+                        <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-xs text-orange-400 uppercase tracking-wider">Trailing Stop</p>
+                                <i data-lucide="git-commit" class="w-4 h-4 text-orange-400"></i>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Current Price</span>
+                                    <span id="trailingCurrent" class="font-mono text-white">Rp 5,425</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Trailing Distance</span>
+                                    <span id="trailingDistance" class="font-mono text-orange-400">2.0%</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Trigger Price</span>
+                                    <span id="trailingTrigger" class="font-mono text-orange-400">Rp 5,316</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Model Metadata Section -->
+        <section class="max-w-7xl mx-auto px-6">
+            <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-5 h-5 text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white">Model Metadata</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-gray-800/30 rounded-xl p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Model Used</p>
+                        <p id="modelUsed" class="text-sm font-mono text-emerald-400 break-all">best_lstm_BBRI_JK.keras</p>
+                    </div>
+                    <div class="bg-gray-800/30 rounded-xl p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Prediction Date</p>
+                        <p id="modelPredictionDate" class="text-sm font-mono text-white">2026-02-01</p>
+                    </div>
+                    <div class="bg-gray-800/30 rounded-xl p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Model Accuracy</p>
+                        <div class="flex items-center gap-2">
+                            <p id="modelAccuracy" class="text-sm font-mono text-white">87.5%</p>
+                            <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: 87.5%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800/30 rounded-xl p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Model Health</p>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <p id="modelHealth" class="text-sm font-medium text-emerald-400">Healthy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-6">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="text-sm text-gray-500">TukuApps Stock Prediction AI &copy; 2026. All predictions are for educational purposes only.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Sample stock data (will be populated from URL params or localStorage)
+        const stockData = {
+            ticker: 'BBRI.JK',
+            company: 'Bank Rakyat Indonesia',
+            signal: 'BUY',
+            confidence: 87,
+            lastClose: 5425,
+            predicted: 5700,
+            change: 5.07,
+            strategy: {
+                entryLow: 5350,
+                entryHigh: 5450,
+                targetPrice: 5700,
+                targetPercent: 5.07,
+                stopLoss: 5200,
+                stopLossPercent: -4.1,
+                trailingStop: 2.0,
+                riskReward: 1.2
+            },
+            model: {
+                name: 'best_lstm_BBRI_JK.keras',
+                accuracy: 87.5,
+                predictionDate: '2026-02-01',
+                health: 'Healthy'
+            }
+        };
+
+        // Historical price data (mock)
+        const historicalData = {
+            labels: ['Jan 20', 'Jan 21', 'Jan 22', 'Jan 23', 'Jan 24', 'Jan 25', 'Jan 26', 'Jan 27', 'Jan 28', 'Jan 29', 'Jan 30', 'Jan 31', 'Feb 1', 'Feb 2'],
+            actual: [5180, 5220, 5195, 5280, 5310, 5290, 5350, 5380, 5340, 5400, 5420, 5390, 5425, null],
+            predicted: [null, null, null, null, null, null, null, null, null, null, null, null, 5425, 5700]
+        };
+
+        // Parse URL params to get stock data
+        function getStockFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const tickerParam = params.get('ticker');
+            
+            if (tickerParam) {
+                // Try to load from localStorage predictions
+                const savedPredictions = localStorage.getItem('tukuapps_current_stock');
+                if (savedPredictions) {
+                    try {
+                        return JSON.parse(savedPredictions);
+                    } catch (e) {
+                        console.log('Error parsing stock data');
+                    }
+                }
+            }
+            return stockData; // Return default data
+        }
+
+        // Update UI with stock data
+        function updateUI(data) {
+            // Update ticker icon
+            document.getElementById('tickerIcon').textContent = data.ticker.substring(0, 2);
+            document.getElementById('tickerSymbol').textContent = data.ticker;
+            document.getElementById('companyName').textContent = data.company;
+            
+            // Update signal badge
+            const signalBadge = document.getElementById('signalBadge');
+            const signalClasses = {
+                'BUY': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                'SELL': 'bg-red-500/20 text-red-400 border-red-500/30',
+                'HOLD': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+            };
+            signalBadge.className = `px-4 py-2 rounded-full text-sm font-bold border signal-glow ${signalClasses[data.signal] || signalClasses['HOLD']}`;
+            signalBadge.textContent = `${data.signal} SIGNAL`;
+            
+            // Update prices
+            document.getElementById('signalStrength').textContent = `${data.confidence}%`;
+            document.getElementById('lastClose').textContent = `Rp ${data.lastClose.toLocaleString()}`;
+            document.getElementById('predictedPrice').textContent = `Rp ${data.predicted.toLocaleString()}`;
+            
+            // Update change percent
+            const changeEl = document.getElementById('changePercent');
+            const isPositive = data.change >= 0;
+            changeEl.className = `text-lg font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'} flex items-center justify-end gap-1`;
+            changeEl.innerHTML = `
+                <i data-lucide="${isPositive ? 'trending-up' : 'trending-down'}" class="w-5 h-5"></i>
+                <span>${isPositive ? '+' : ''}${data.change.toFixed(2)}%</span>
+            `;
+            
+            // Update strategy
+            if (data.strategy) {
+                document.getElementById('entryLow').textContent = `Rp ${data.strategy.entryLow.toLocaleString()}`;
+                document.getElementById('entryHigh').textContent = `Rp ${data.strategy.entryHigh.toLocaleString()}`;
+                document.getElementById('stopLoss').textContent = `Rp ${data.strategy.stopLoss.toLocaleString()}`;
+                document.getElementById('stopLossPercent').textContent = `${data.strategy.stopLossPercent}% from entry`;
+                document.getElementById('targetPrice').textContent = `Rp ${data.strategy.targetPrice.toLocaleString()}`;
+                document.getElementById('targetPercent').textContent = `+${data.strategy.targetPercent}% potential gain`;
+                document.getElementById('profitPotential').textContent = `+${data.strategy.targetPercent}%`;
+                document.getElementById('rrRatio').textContent = `1 : ${data.strategy.riskReward}`;
+                
+                // Calculate RR Grade
+                const rrGrade = data.strategy.riskReward >= 2 ? 'A' : data.strategy.riskReward >= 1.5 ? 'B+' : data.strategy.riskReward >= 1 ? 'B' : 'C';
+                document.getElementById('rrGrade').textContent = rrGrade;
+                
+                // Trailing stop
+                document.getElementById('trailingCurrent').textContent = `Rp ${data.lastClose.toLocaleString()}`;
+                document.getElementById('trailingDistance').textContent = `${data.strategy.trailingStop}%`;
+                const triggerPrice = Math.round(data.lastClose * (1 - data.strategy.trailingStop / 100));
+                document.getElementById('trailingTrigger').textContent = `Rp ${triggerPrice.toLocaleString()}`;
+            }
+            
+            // Update model metadata
+            if (data.model) {
+                document.getElementById('modelUsed').textContent = data.model.name;
+                document.getElementById('modelPredictionDate').textContent = data.model.predictionDate;
+                document.getElementById('modelAccuracy').textContent = `${data.model.accuracy}%`;
+                document.getElementById('modelHealth').textContent = data.model.health;
+            } else {
+                // Generate model name from ticker
+                const modelName = `best_lstm_${data.ticker.replace('.', '_')}.keras`;
+                document.getElementById('modelUsed').textContent = modelName;
+                document.getElementById('modelPredictionDate').textContent = new Date().toISOString().split('T')[0];
+            }
+            
+            // Reinitialize icons
+            lucide.createIcons();
+        }
+
+        // Initialize Chart
+        function initChart(data) {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            
+            // Generate historical data based on last close
+            const basePrice = data.lastClose;
+            const labels = [];
+            const actualPrices = [];
+            const predictedPrices = [];
+            
+            // Generate 14 days of data
+            for (let i = 13; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i + 1);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                if (i > 0) {
+                    // Historical prices with some variance
+                    const variance = (Math.random() - 0.5) * 0.04;
+                    const dayPrice = Math.round(basePrice * (0.96 + (13 - i) * 0.003 + variance));
+                    actualPrices.push(dayPrice);
+                    predictedPrices.push(null);
+                } else {
+                    // Today and prediction
+                    actualPrices.push(basePrice);
+                    predictedPrices.push(null);
+                }
+            }
+            
+            // Add tomorrow's prediction
+            labels.push(new Date(Date.now() + 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            actualPrices.push(null);
+            predictedPrices[predictedPrices.length - 1] = basePrice;
+            predictedPrices.push(data.predicted);
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Actual Price',
+                            data: actualPrices,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#1f2937',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'AI Prediction',
+                            data: predictedPrices,
+                            borderColor: data.change >= 0 ? '#10b981' : '#ef4444',
+                            backgroundColor: 'transparent',
+                            borderWidth: 3,
+                            borderDash: [8, 4],
+                            fill: false,
+                            tension: 0,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: data.change >= 0 ? '#10b981' : '#ef4444',
+                            pointBorderColor: '#1f2937',
+                            pointBorderWidth: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#f3f4f6',
+                            bodyColor: '#9ca3af',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.raw === null) return null;
+                                    return `${context.dataset.label}: Rp ${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(55, 65, 81, 0.3)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(55, 65, 81, 0.3)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return 'Rp ' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const data = getStockFromURL();
+            updateUI(data);
+            initChart(data);
+        });
+    </script>
+</body>
+</html>

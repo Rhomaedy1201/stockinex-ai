@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3,
@@ -6,12 +7,31 @@ import {
   Minus,
   RefreshCw,
   Eye,
+  Target,
 } from "lucide-react";
 import { useDashboard } from "../context/DashboardContext";
+import { StrategyModal } from "../components/modals/StrategyModal";
+import type { Prediction } from "../types";
 
 export default function Predictions() {
   const navigate = useNavigate();
   const { predictions, stats } = useDashboard();
+  const [selectedStock, setSelectedStock] = useState<Prediction | null>(null);
+  const [showStrategyModal, setShowStrategyModal] = useState(false);
+
+  const openStrategyModal = (stock: Prediction) => {
+    setSelectedStock(stock);
+    setShowStrategyModal(true);
+  };
+
+  const closeStrategyModal = () => {
+    setShowStrategyModal(false);
+    setSelectedStock(null);
+  };
+
+  const openTickerDetail = (stock: Prediction) => {
+    navigate(`/predictions/${stock.ticker}`);
+  };
 
   const getSignalIcon = (signal: string) => {
     switch (signal) {
@@ -165,14 +185,23 @@ export default function Predictions() {
                   <td className="px-6 py-4 text-white font-medium">
                     Rp {stock.predicted.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => navigate(`/predictions/${stock.ticker}`)}
-                      className="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4 text-emerald-400" />
-                    </button>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => openStrategyModal(stock)}
+                        className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors"
+                        title="View Strategy"
+                      >
+                        <Target className="w-4 h-4 text-purple-400" />
+                      </button>
+                      <button
+                        onClick={() => openTickerDetail(stock)}
+                        className="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4 text-emerald-400" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -180,6 +209,13 @@ export default function Predictions() {
           </table>
         </div>
       </div>
+
+      {/* Strategy Modal */}
+      <StrategyModal
+        stock={selectedStock}
+        isOpen={showStrategyModal}
+        onClose={closeStrategyModal}
+      />
     </div>
   );
 }

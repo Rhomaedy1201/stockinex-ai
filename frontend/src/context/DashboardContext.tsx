@@ -54,13 +54,26 @@ interface DashboardContextValue {
   stopTraining: () => void;
   addLog: (message: string, type?: LogEntry["type"]) => void;
 
-  // Computed
+  // Computed - Portfolio
   getOpenTrades: () => Trade[];
   getClosedTrades: () => Trade[];
   getInvestedAmount: () => number;
   getTotalEquity: () => number;
   getPortfolioFloatingPL: () => number;
+  getPortfolioFloatingPLPercent: () => string;
+  getCashAllocation: () => string;
+  getInvestedAllocation: () => string;
+  getWinningPositions: () => number;
+  getLosingPositions: () => number;
+  getBestPerformer: () => string;
+  getMarketValue: (trade: Trade) => number;
+  getFloatingPL: (trade: Trade) => number;
+  getFloatingPLPercent: (trade: Trade) => number;
   maskValue: (value: number, prefix?: string) => string;
+
+  // Actions - Portfolio
+  closeTrade: (trade: Trade) => void;
+  refreshPrices: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
@@ -355,6 +368,111 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
   }, [getOpenTrades]);
 
+  const getPortfolioFloatingPLPercent = useCallback(() => {
+    const invested = getInvestedAmount();
+    if (invested === 0) return "0.00%";
+    const pl = getPortfolioFloatingPL();
+    const percent = (pl / invested) * 100;
+    return (percent >= 0 ? "+" : "") + percent.toFixed(2) + "%";
+  }, [getInvestedAmount, getPortfolioFloatingPL]);
+
+  const getCashAllocation = useCallback(() => {
+    const total = getTotalEquity();
+    if (total === 0) return "0";
+    return ((tradingBalance / total) * 100).toFixed(1);
+  }, [getTotalEquity, tradingBalance]);
+
+  const getInvestedAllocation = useCallback(() => {
+    const total = getTotalEquity();
+    if (total === 0) return "0";
+    return ((getMarketValueTotal() / total) * 100).toFixed(1);
+  }, [getTotalEquity, getMarketValueTotal]);
+
+  const getWinningPositions = useCallback(() => {
+    return getOpenTrades().filter((t) => t.currentPrice > t.entryPrice).length;
+  }, [getOpenTrades]);
+
+  const getLosingPositions = useCallback(() => {
+    return getOpenTrades().filter((t) => t.currentPrice < t.entryPrice).length;
+  }, [getOpenTrades]);
+
+  const getBestPerformer = useCallback(() => {
+    const openTrades = getOpenTrades();
+    if (openTrades.length === 0) return "N/A";
+    let best = openTrades[0];
+    let bestPercent =
+      ((best.currentPrice - best.entryPrice) / best.entryPrice) * 100;
+
+    openTrades.forEach((t) => {
+      const percent = ((t.currentPrice - t.entryPrice) / t.entryPrice) * 100;
+      if (percent > bestPercent) {
+        best = t;
+        bestPercent = percent;
+      }
+    });
+    return best.ticker.split(".")[0];
+  }, [getOpenTrades]);
+
+  const getMarketValue = useCallback((trade: Trade) => {
+    return trade.currentPrice * trade.quantity;
+  }, []);
+
+  const getFloatingPL = useCallback((trade: Trade) => {
+    return (trade.currentPrice - trade.entryPrice) * trade.quantity;
+  }, []);
+
+  const getFloatingPLPercent = useCallback((trade: Trade) => {
+    return ((trade.currentPrice - trade.entryPrice) / trade.entryPrice) * 100;
+  }, []);
+
+  const closeTrade = useCallback(
+    (trade: Trade) => {
+      const exitPrice = prompt(
+        `Enter exit/sell price for ${trade.ticker}:`,
+        String(trade.currentPrice),
+      );
+      if (!exitPrice || isNaN(parseFloat(exitPrice))) return;
+
+      const exit = parseFloat(exitPrice);
+      const profit = (exit - trade.entryPrice) * trade.quantity;
+      const profitPercent =
+        ((exit - trade.entryPrice) / trade.entryPrice) * 100;
+      const saleAmount = exit * trade.quantity;
+
+      setTrades((prev) =>
+        prev.map((t) =>
+          t.id === trade.id
+            ? {
+                ...t,
+                status: "Closed" as const,
+                exitPrice: exit,
+                currentPrice: exit,
+                profit,
+                profitPercent,
+              }
+            : t,
+        ),
+      );
+
+      setTradingBalance((prev) => prev + saleAmount);
+    },
+    [setTrades, setTradingBalance],
+  );
+
+  const refreshPrices = useCallback(() => {
+    setTrades((prev) =>
+      prev.map((trade) => {
+        if (trade.status !== "Open") return trade;
+        // Simulate price change (-2% to +2%)
+        const change = (Math.random() - 0.5) * 0.04;
+        return {
+          ...trade,
+          currentPrice: Math.round(trade.currentPrice * (1 + change)),
+        };
+      }),
+    );
+  }, [setTrades]);
+
   const maskValue = useCallback(
     (value: number, prefix = "") => {
       return privacyMode
@@ -392,7 +510,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     getInvestedAmount,
     getTotalEquity,
     getPortfolioFloatingPL,
+    getPortfolioFloatingPLPercent,
+    getCashAllocation,
+    getInvestedAllocation,
+    getWinningPositions,
+    getLosingPositions,
+    getBestPerformer,
+    getMarketValue,
+    getFloatingPL,
+    getFloatingPLPercent,
     maskValue,
+    closeTrade,
+    refreshPrices,
   };
 
   return (
